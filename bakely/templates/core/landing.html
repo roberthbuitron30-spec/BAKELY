@@ -1,0 +1,88 @@
+{% extends "base.html" %}{% load static humanize %}
+{% block content %}
+<section class="hero" aria-labelledby="titulo">
+  <div class="hero-head">
+    <div>
+      <h1 id="titulo" class="hero-word">BAKELY</h1>
+      <p class="hero-lede">Almidones de papa y yuca, y licores destilados en la planta piloto de la UPEC.
+        Cada saco y cada botella se puede rastrear hasta el tubérculo o el mosto del que salió.</p>
+    </div>
+    <img class="sello-upec" src="{% static 'img/sello-upec.svg' %}" alt="Sello de la Universidad Politécnica Estatal del Carchi">
+  </div>
+
+  <div class="lineas">
+    <article class="glass linea-col linea-A" aria-labelledby="la">
+      <h2 id="la">Línea A · Almidones</h2>
+      <p class="materia">Papa andina y yuca del Carchi</p>
+      <ol class="tuberia">
+        <li class="control">Recepción e inspección <span class="pc">PC-1</span></li>
+        <li>Rallado y extracción con agua</li>
+        <li>Sedimentación de la lechada</li>
+        <li class="control">Secado a 45–50 °C <span class="pc">PC-2</span></li>
+        <li>Molienda, tamizado y saco de 25 kg</li>
+      </ol>
+      <div class="salida">
+        <span class="num" data-contador="kg_almidon">{{ contadores.kg_almidon|floatformat:0|intcomma }}</span>
+        <span>kg de almidón puro procesado</span>
+      </div>
+    </article>
+
+    <article class="glass linea-col linea-B" aria-labelledby="lb">
+      <h2 id="lb">Línea B · Licores y bebidas</h2>
+      <p class="materia">Mostos fermentados con levadura seleccionada</p>
+      <ol class="tuberia">
+        <li class="control">Inoculación del mosto <span class="pc">PC-3</span></li>
+        <li>Fermentación monitoreada por sensores</li>
+        <li class="control">Corte de cabezas, corazón y colas <span class="pc">PCC-1</span></li>
+        <li>Maceración, ajuste de grado y filtrado</li>
+        <li>Botella serializada con QR</li>
+      </ol>
+      <div class="salida">
+        <span class="num" data-contador="litros_destilados">{{ contadores.litros_destilados|floatformat:1|intcomma }}</span>
+        <span>litros destilados con trazabilidad</span>
+      </div>
+    </article>
+  </div>
+
+  <div class="accesos">
+    <a class="glass acceso" href="{% url 'core:catalogo' %}">
+      <span class="ic"><i data-lucide="store"></i></span>
+      <span><strong>Tienda y trazabilidad de productos</strong>
+        <span>Compra en línea o consulta el origen de tu botella o saco.</span></span>
+    </a>
+    <a class="glass acceso" href="{% url 'core:planta_dashboard' %}">
+      <span class="ic"><i data-lucide="factory"></i></span>
+      <span><strong>Terminal operativo de planta</strong>
+        <span>Acceso para operarios y dirección de planta.</span></span>
+    </a>
+  </div>
+
+  <p class="certificados"><span class="num" data-contador="lotes_certificados">{{ contadores.lotes_certificados }}</span>
+    lotes certificados y liberados por la dirección de planta</p>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+  const fmt = (k, v) => k === "litros_destilados"
+    ? v.toLocaleString("es-EC", {minimumFractionDigits: 1, maximumFractionDigits: 1})
+    : Math.round(v).toLocaleString("es-EC");
+  const reducir = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function pintar(datos, animar) {
+    document.querySelectorAll("[data-contador]").forEach(el => {
+      const k = el.dataset.contador, fin = Number(datos[k] || 0);
+      if (!animar || reducir) { el.textContent = fmt(k, fin); return; }
+      const t0 = performance.now(), dur = 1400;
+      const paso = t => { const p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+        el.textContent = fmt(k, fin * e); if (p < 1) requestAnimationFrame(paso); };
+      requestAnimationFrame(paso);
+    });
+  }
+  pintar({kg_almidon: {{ contadores.kg_almidon|default:0|stringformat:"f" }},
+          litros_destilados: {{ contadores.litros_destilados|default:0|stringformat:"f" }},
+          lotes_certificados: {{ contadores.lotes_certificados|default:0 }}}, true);
+  setInterval(() => fetch("{% url 'core:contadores_json' %}").then(r => r.json()).then(d => pintar(d, false)).catch(() => {}), 30000);
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,121 @@
+{% extends "planta/base_planta.html" %}{% load bakely_tags humanize %}
+{% block titulo_pagina %}Tablero{% endblock %}
+{% block content %}
+<div class="main-head">
+  <div>
+    <h1>Tablero de planta</h1>
+    <p>Equipos, órdenes y almacén en vivo. Actualizado <time id="ts-actualizado">{% now "H:i:s" %}</time>.</p>
+  </div>
+  <a class="btn-bk sm" href="{% url 'core:ordenes' %}"><i data-lucide="clipboard-list"></i> Ver órdenes</a>
+</div>
+
+<section class="kpis" aria-label="Indicadores">
+  <div class="glass kpi linea-A"><div class="v" style="color:var(--c-linea)">{{ contadores.kg_almidon|floatformat:0|intcomma }}</div><div class="l">kg de almidón producido</div></div>
+  <div class="glass kpi linea-B"><div class="v" style="color:var(--c-linea)">{{ contadores.litros_destilados|floatformat:1 }}</div><div class="l">L de corazón destilado conforme</div></div>
+  <div class="glass kpi {% if lotes_cuarentena %}glow-warn{% endif %}"><div class="v">{{ lotes_cuarentena }}</div><div class="l">lotes en cuarentena por liberar</div></div>
+  <div class="glass kpi {% if ira is not None and ira < 95 %}glow-alert{% elif ira is not None %}glow-ok{% endif %}">
+    <div class="v">{% if ira is not None %}{{ ira }} %{% else %}—{% endif %}</div><div class="l">exactitud de inventario (IRA, 90 días)</div></div>
+</section>
+
+<div class="grid-planta">
+  <section class="span-12" aria-labelledby="h-equipos">
+    <h2 id="h-equipos" class="panel-title">Tanques, alambiques y secadores
+      <small>La franja verde de cada dial es el rango de especificación.</small></h2>
+    <div class="equipos" id="equipos">
+      {% for t in tarjetas %}{% with eq=t.eq %}
+      <article class="glass equipo {{ eq.estado|estado_css }}" data-equipo="{{ eq.codigo }}">
+        <div class="equipo-head">
+          <div><span class="codigo">{{ eq.codigo }}</span><h3>{{ eq.nombre }}</h3></div>
+          <span class="pill {% if eq.estado == 'ALERTA' %}pill-alert{% elif eq.estado == 'OPERANDO' %}pill-ok{% elif eq.estado == 'LIMPIEZA' %}pill-warn{% else %}pill-muted{% endif %}"><span class="dot"></span>{{ eq.get_estado_display }}</span>
+        </div>
+        <div class="equipo-body">
+          {% if eq.capacidad %}{% tank eq.porcentaje_llenado eq.estado %}{% endif %}
+          <div class="gauges">
+            {% for var, rango in eq.limites.items %}{% with l=t.lecturas|get_item:var %}
+              {% gauge l.valor rango.0 rango.1 var|var_nombre var|var_unidad size=96 %}
+            {% endwith %}{% empty %}<p class="faint small m-0">Equipo sin sensores conectados.</p>{% endfor %}
+          </div>
+        </div>
+        <div class="equipo-foot">
+          <span class="text-truncate">{{ eq.get_estacion_display }}</span>
+          {% if t.editable %}<span class="edit-chip"><i data-lucide="pencil"></i> Tu estación</span>
+          {% else %}<span class="lock-chip"><i data-lucide="lock"></i> Solo lectura</span>{% endif %}
+        </div>
+      </article>
+      {% endwith %}{% endfor %}
+    </div>
+  </section>
+
+  <section class="glass glass-pad span-8" aria-labelledby="h-ordenes">
+    <h2 id="h-ordenes" class="panel-title">Órdenes de producción activas <small>{{ ordenes|length }} en curso o planificadas</small></h2>
+    <div class="tabla-scroll">
+      <table class="tabla-bk">
+        <thead><tr><th>Orden</th><th>Producto</th><th>Etapa actual</th><th>Equipo</th><th>Estado</th><th></th></tr></thead>
+        <tbody>
+        {% for o in ordenes %}
+          <tr class="{% if o.linea == 'ALMIDON' %}linea-A{% else %}linea-B{% endif %}">
+            <td class="num">{{ o.codigo }}</td>
+            <td><span class="linea-tag">{{ o.producto.nombre }}</span></td>
+            <td>{{ o.get_etapa_actual_display }}
+              {% if permisos_estacion|get_item:o.etapa_actual %}<span class="edit-chip ms-1" title="Puedes registrar en esta etapa"><i data-lucide="pencil"></i></span>{% else %}<span class="lock-chip ms-1" title="Solo lectura"><i data-lucide="lock"></i></span>{% endif %}</td>
+            <td>{{ o.equipo.codigo|default:"—" }}</td>
+            <td><span class="pill {% if o.estado == 'PROC' %}pill-info{% elif o.estado == 'PAUSA' %}pill-warn{% else %}pill-muted{% endif %}">{{ o.get_estado_display }}</span></td>
+            <td><a class="btn-bk sm" href="{{ o.get_absolute_url }}">Abrir eBR</a></td>
+          </tr>
+        {% empty %}<tr><td colspan="6" class="dim">No hay órdenes activas. La dirección de planta crea órdenes desde Maestros o la API.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="glass glass-pad span-4" aria-labelledby="h-alertas">
+    <h2 id="h-alertas" class="panel-title">Fuera de rango ahora <small>Última lectura de cada sensor</small></h2>
+    {% for a in alertas %}
+      <div class="alerta-item"><span class="pill pill-alert"><span class="dot"></span>{{ a.equipo.codigo }}</span>
+        <span>{{ a.variable|var_nombre }} <strong class="num">{{ a.valor|dec:2 }} {{ a.variable|var_unidad }}</strong>
+        <span class="faint small d-block">{{ a.timestamp|naturaltime }}</span></span></div>
+    {% empty %}<p class="dim m-0">Todas las variables están dentro de especificación.</p>{% endfor %}
+  </section>
+
+  <section class="glass glass-pad span-6" aria-labelledby="h-perm">
+    <h2 id="h-perm" class="panel-title">Tus permisos de edición <small>Ves todo; editas lo resaltado</small></h2>
+    <div class="estaciones-mapa">
+      {% for codigo, nombre in estaciones %}
+        <div class="{% if permisos_estacion|get_item:codigo %}mia{% endif %}">
+          {% if permisos_estacion|get_item:codigo %}<i data-lucide="pencil"></i>{% else %}<i data-lucide="lock"></i>{% endif %}{{ nombre }}</div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="glass glass-pad span-6" aria-labelledby="h-zonas">
+    <h2 id="h-zonas" class="panel-title">Existencias por zona <a class="small" href="{% url 'core:wms' %}">Abrir WMS</a></h2>
+    {% for z in stock_zonas %}
+      <div class="d-flex justify-content-between small mb-1"><span>{{ zonas|get_item:z.ubicacion__zona }}</span>
+        <span class="num">{{ z.total|dec:0 }} · {{ z.lotes }} lote{{ z.lotes|pluralize }}</span></div>
+    {% empty %}<p class="dim m-0">Sin existencias registradas.</p>{% endfor %}
+    {% if proximos_caducar %}
+      <h3 class="h6 mt-3 dim">Próximos a caducar (FEFO)</h3>
+      {% for l in proximos_caducar %}<div class="d-flex justify-content-between small"><a href="{{ l.get_absolute_url }}">{{ l.codigo }}</a><span>{{ l.fecha_caducidad|date:"d M Y" }} · {{ l.dias_para_caducar }} días</span></div>{% endfor %}
+    {% endif %}
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Refresco de equipos cada 10 s: re-renderiza los diales en el servidor y reemplaza la cuadrícula.
+(() => {
+  const cont = document.getElementById("equipos"), ts = document.getElementById("ts-actualizado");
+  async function refrescar() {
+    if (document.hidden) return;
+    try {
+      const html = await (await fetch(location.href, {headers: {"X-Requested-With": "fetch"}})).text();
+      const nuevo = new DOMParser().parseFromString(html, "text/html").getElementById("equipos");
+      if (nuevo) { cont.innerHTML = nuevo.innerHTML; window.lucide && lucide.createIcons(); }
+      ts.textContent = new Date().toLocaleTimeString("es-EC");
+    } catch (e) { ts.textContent = "sin conexión, reintentando"; }
+  }
+  setInterval(refrescar, 10000);
+})();
+</script>
+{% endblock %}

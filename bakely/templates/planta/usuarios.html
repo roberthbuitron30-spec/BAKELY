@@ -1,0 +1,31 @@
+{% extends "planta/base_planta.html" %}
+{% block titulo_pagina %}Usuarios{% endblock %}
+{% block content %}
+<div class="main-head">
+  <div><h1>Usuarios y estaciones</h1><p>Solo la dirección de planta ve esta pantalla.</p></div>
+  <a class="btn-bk primario sm" href="{% url 'core:usuario_nuevo' %}"><i data-lucide="user-plus"></i> Crear operario</a>
+</div>
+<div class="grid-planta">
+  <section class="glass glass-pad span-8 tabla-scroll" aria-label="Usuarios">
+    <table class="tabla-bk">
+      <thead><tr><th>Usuario</th><th>Rol</th><th>Estación</th><th>Edición</th><th>Último ingreso</th><th></th></tr></thead>
+      <tbody>{% for u in usuarios %}
+        <tr><td><strong>{{ u.get_full_name|default:u.username }}</strong><div class="faint small">{{ u.username }}{% if not u.is_active %} · cuenta desactivada{% endif %}</div></td>
+          <td>{{ u.perfil.get_rol_display }}</td>
+          <td>{{ u.perfil.get_estacion_display|default:"—" }}</td>
+          <td>{% if u.perfil.rol == 'OPERARIO' %}
+            <form method="post" action="{% url 'core:usuario_toggle_estacion' u.pk %}">{% csrf_token %}
+              <button class="btn-bk sm {% if u.perfil.estacion_activa %}ok{% endif %}" aria-pressed="{{ u.perfil.estacion_activa|yesno:'true,false' }}">{% if u.perfil.estacion_activa %}Activa{% else %}Solo lectura{% endif %}</button></form>
+            {% elif u.perfil.rol == 'ADMIN' or u.is_superuser %}<span class="pill pill-info">Todo</span>{% else %}<span class="faint">Tienda</span>{% endif %}</td>
+          <td class="small">{{ u.last_login|date:"d/m/Y H:i"|default:"Nunca" }}</td>
+          <td><a class="btn-bk sm" href="{% url 'core:usuario_editar' u.pk %}">Editar</a></td></tr>
+      {% endfor %}</tbody>
+    </table>
+  </section>
+  <section class="glass glass-pad span-4" aria-labelledby="h-ses">
+    <h2 id="h-ses" class="panel-title">Sesiones recientes</h2>
+    {% for s in sesiones %}<div class="small d-flex justify-content-between"><span>{{ s.username }} <span class="{% if s.accion == 'LOGIN_KO' %}text-danger{% else %}faint{% endif %}">{{ s.get_accion_display|lower }}</span></span><span class="faint">{{ s.timestamp|date:"d/m H:i" }} · {{ s.ip|default:"" }}</span></div>
+    {% empty %}<p class="dim small">Sin sesiones registradas.</p>{% endfor %}
+  </section>
+</div>
+{% endblock %}

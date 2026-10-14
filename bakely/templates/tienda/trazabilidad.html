@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Trazabilidad · BAKELY{% endblock %}
+{% block content %}
+<div class="container-xl pb-5">
+  <h1>Rastrear mi producto</h1>
+  <p class="dim measure">Escanea el QR de la etiqueta o escribe el código impreso en la botella o el saco.</p>
+  <form class="traz-buscar mb-4" action="{% url 'core:trazabilidad' %}">
+    <input class="form-control glass-input" name="codigo" value="{{ codigo|default:'' }}" placeholder="Serial, código de lote o código QR" aria-label="Código" required autofocus>
+    <button class="btn-bk primario" type="submit"><i data-lucide="scan-line"></i> Rastrear</button>
+  </form>
+
+  {% if no_encontrado %}
+    <div class="flash error">No encontramos «{{ codigo }}». Revisa que el código coincida con el impreso junto al QR, incluyendo guiones.</div>
+  {% endif %}
+
+  {% if t %}
+  <div class="row g-4">
+    <div class="col-lg-5">
+      <div class="glass glass-pad {% if lote.estado == 'LIBERADO' or lote.estado == 'AGOTADO' %}glow-ok{% else %}glow-warn{% endif %}">
+        <span class="dim small">{{ t.sku }}</span>
+        <h2 class="mt-1">{{ t.producto }}</h2>
+        {% if unidad %}<p class="m-0">Botella / saco <strong class="num">{{ unidad.serial }}</strong>{% if unidad.sello_fiscal %} · sello fiscal {{ unidad.sello_fiscal }}{% endif %}</p>{% endif %}
+        <dl class="row small mt-3 mb-0">
+          <dt class="col-6 dim fw-normal">Lote</dt><dd class="col-6 num">{{ t.lote }}</dd>
+          <dt class="col-6 dim fw-normal">Elaborado</dt><dd class="col-6">{{ t.elaborado }}</dd>
+          {% if t.caduca %}<dt class="col-6 dim fw-normal">Consumir antes de</dt><dd class="col-6">{{ t.caduca }}</dd>{% endif %}
+          {% if t.abv %}<dt class="col-6 dim fw-normal">Graduación medida</dt><dd class="col-6">{{ t.abv }} % ABV</dd>{% endif %}
+          {% if t.humedad_pct %}<dt class="col-6 dim fw-normal">Humedad final</dt><dd class="col-6">{{ t.humedad_pct }} %</dd>{% endif %}
+          {% if t.pcc1_conforme is not None %}<dt class="col-6 dim fw-normal">Control de metanol (PCC-1)</dt>
+            <dd class="col-6">{% if t.pcc1_conforme %}<span class="pill pill-ok">Conforme</span>{% else %}<span class="pill pill-alert">No conforme</span>{% endif %}</dd>{% endif %}
+          <dt class="col-6 dim fw-normal">Certificado de inocuidad</dt><dd class="col-6">{{ t.certificado_inocuidad|default:"En trámite" }}</dd>
+          <dt class="col-6 dim fw-normal">Estado del lote</dt><dd class="col-6">{{ t.estado }}</dd>
+        </dl>
+      </div>
+      {% if t.origen %}
+      <div class="glass glass-pad mt-3">
+        <h3 class="h6">Materias primas de origen</h3>
+        {% for o in t.origen %}<p class="small mb-2"><strong>{{ o.materia_prima }}</strong><br><span class="dim">{{ o.productor|default:"" }}{% if o.procedencia %} · {{ o.procedencia }}{% endif %} · recibido {{ o.recibido }}</span></p>{% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    <div class="col-lg-7">
+      <div class="glass glass-pad">
+        <h3 class="h5 mb-3">Recorrido en planta</h3>
+        <ol class="timeline">
+          {% for h in t.proceso %}
+            <li class="{% if not h.conforme %}nc{% endif %}"><strong>{{ h.etapa }}</strong>
+              <span class="dim small"> · {{ h.fecha|slice:":10" }}{% if h.control != 'GEN' %} · control {{ h.control }} {% if h.conforme %}conforme{% else %}con observaciones{% endif %}{% endif %}</span></li>
+          {% empty %}<li>Registro de proceso en consolidación.</li>{% endfor %}
+        </ol>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

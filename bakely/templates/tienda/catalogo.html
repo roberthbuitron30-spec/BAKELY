@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Tienda · BAKELY{% endblock %}
+{% block content %}
+<div class="container-xl pb-4">
+  <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-4">
+    <div>
+      <h1 class="m-0">Tienda</h1>
+      <p class="dim m-0 measure">Producción de la planta piloto UPEC. Todo lote vendido aquí pasó sus controles de calidad y fue liberado por la dirección de planta.</p>
+    </div>
+    <div class="glass tabs-bk" role="tablist" aria-label="Familias de productos">
+      <button role="tab" id="t-alm" class="linea-A" aria-controls="p-alm" aria-selected="{% if tab != 'bebidas' %}true{% else %}false{% endif %}"><i data-lucide="wheat"></i> Almidones andinos</button>
+      <button role="tab" id="t-beb" class="linea-B" aria-controls="p-beb" aria-selected="{% if tab == 'bebidas' %}true{% else %}false{% endif %}"><i data-lucide="wine"></i> Licores y bebidas</button>
+    </div>
+  </div>
+
+  <section id="p-alm" role="tabpanel" aria-labelledby="t-alm" {% if tab == 'bebidas' %}hidden{% endif %}>
+    <div class="prod-grid">
+      {% for p in almidones %}{% include "tienda/_tarjeta_producto.html" %}
+      {% empty %}<p class="dim">Aún no hay almidones publicados. Publícalos desde el administrador marcando «Publicado en tienda».</p>{% endfor %}
+    </div>
+  </section>
+
+  <section id="p-beb" role="tabpanel" aria-labelledby="t-beb" {% if tab != 'bebidas' %}hidden{% endif %}>
+    <p class="glass glass-pad dim small mb-3"><i data-lucide="shield-check"></i> Venta exclusiva a mayores de 18 años. Cada botella lleva un QR propio y sello fiscal.</p>
+    <div class="prod-grid">
+      {% for p in bebidas %}{% include "tienda/_tarjeta_producto.html" %}
+      {% empty %}<p class="dim">Aún no hay bebidas publicadas.</p>{% endfor %}
+    </div>
+  </section>
+
+  <section class="glass glass-pad mt-5 d-flex flex-wrap gap-3 align-items-center justify-content-between">
+    <div>
+      <h2 class="h4 m-0">¿Ya tienes un producto BAKELY?</h2>
+      <p class="dim m-0">Escribe el código impreso junto al QR para ver su lote, su origen y sus controles.</p>
+    </div>
+    <form class="traz-buscar flex-grow-1" action="{% url 'core:trazabilidad' %}" style="max-width:480px">
+      <input class="form-control glass-input" name="codigo" placeholder="Ej. AGU-2610-00012 o PT-ALM-PAP-2610-01" aria-label="Código del producto" required>
+      <button class="btn-bk primario" type="submit">Rastrear</button>
+    </form>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.querySelectorAll('[role="tab"]').forEach(tab => tab.addEventListener("click", () => {
+  document.querySelectorAll('[role="tab"]').forEach(t => {
+    const activo = t === tab;
+    t.setAttribute("aria-selected", activo);
+    document.getElementById(t.getAttribute("aria-controls")).hidden = !activo;
+  });
+  history.replaceState(null, "", "?tab=" + (tab.id === "t-beb" ? "bebidas" : "almidones"));
+}));
+</script>
+{% endblock %}

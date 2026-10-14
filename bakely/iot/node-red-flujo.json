@@ -1,0 +1,15 @@
+[
+  {"id": "mqtt_in", "type": "mqtt in", "name": "Sensores BAKELY", "topic": "upec/bakely/+/+", "qos": "1",
+   "datatype": "auto", "broker": "broker_local", "x": 140, "y": 100, "wires": [["armar"]]},
+  {"id": "armar", "type": "function", "name": "Armar lectura",
+   "func": "const p = msg.topic.split('/');\nmsg.payload = [{dispositivo: p[2], variable: p[3], valor: Number(msg.payload), ts: new Date().toISOString()}];\nreturn msg;",
+   "outputs": 1, "x": 340, "y": 100, "wires": [["lote"]]},
+  {"id": "lote", "type": "join", "name": "Agrupar 10 s", "mode": "custom", "build": "array", "count": "",
+   "timeout": "10", "joiner": "", "reduceRight": false, "x": 520, "y": 100, "wires": [["aplanar"]]},
+  {"id": "aplanar", "type": "function", "name": "Aplanar", "func": "msg.payload = msg.payload.flat();\nmsg.headers = {'X-Device-Key': env.get('IOT_DEVICE_KEY'), 'Content-Type': 'application/json'};\nreturn msg;",
+   "outputs": 1, "x": 680, "y": 100, "wires": [["post"]]},
+  {"id": "post", "type": "http request", "name": "POST /api/iot/lecturas/", "method": "POST", "ret": "obj",
+   "url": "http://bakely.local/api/iot/lecturas/", "x": 880, "y": 100, "wires": [["debug"]]},
+  {"id": "debug", "type": "debug", "name": "Respuesta BAKELY", "x": 1080, "y": 100, "wires": []},
+  {"id": "broker_local", "type": "mqtt-broker", "name": "Mosquitto planta", "broker": "localhost", "port": "1883"}
+]

@@ -1,0 +1,6 @@
+{# Uso: {% include "planta/_candado.html" with estacion="Destilación y Licores" %} dentro de un contenedor .zona-bloqueada #}
+<div class="candado" role="note">
+  <span class="ic"><i data-lucide="lock"></i></span>
+  <strong>Solo lectura</strong>
+  <span>Esta sección la registra {{ estacion|default:"otra estación" }}.{% if mi_estacion %} Tu estación: {{ user.perfil.get_estacion_display }}.{% endif %}</span>
+</div>

@@ -1,0 +1,20 @@
+{% extends "planta/base_planta.html" %}{% load bakely_tags %}
+{% block titulo_pagina %}Despachos{% endblock %}
+{% block content %}
+<div class="main-head">
+  <div><h1>Despachos al CEDI</h1><p>Picking, armado de palets y envío del contrato <code>despacho_planta_hacia_cedi</code>.</p></div>
+  {% if puede_editar %}<a class="btn-bk sm" href="{% url 'admin:core_despacho_add' %}"><i data-lucide="plus"></i> Nuevo despacho</a>
+  {% else %}<span class="lock-chip"><i data-lucide="lock"></i> Solo Almacén/Despacho crea despachos</span>{% endif %}
+</div>
+<div class="glass glass-pad tabla-scroll">
+  <table class="tabla-bk">
+    <thead><tr><th>Despacho</th><th>CEDI</th><th>Programado</th><th>Líneas</th><th>Transporte</th><th>Estado</th><th></th></tr></thead>
+    <tbody>{% for d in despachos %}
+      <tr><td class="num">{{ d.codigo }}</td><td>{{ d.cedi_destino }}</td><td class="small">{{ d.fecha_programada|date:"d M Y H:i" }}</td>
+        <td class="num">{{ d.n }}</td><td class="small">{{ d.transportista }} · {{ d.placa_vehiculo }}</td>
+        <td><span class="pill {% if d.estado == 'CONFIRMADO' or d.estado == 'ENVIADO' %}pill-ok{% elif d.estado == 'ERROR' %}pill-alert{% else %}pill-warn{% endif %}">{{ d.get_estado_display }}</span></td>
+        <td><a class="btn-bk sm" href="{% url 'core:despacho_detalle' d.pk %}">Abrir</a></td></tr>
+    {% empty %}<tr><td colspan="7" class="dim">No hay despachos registrados.</td></tr>{% endfor %}</tbody>
+  </table>
+</div>
+{% endblock %}

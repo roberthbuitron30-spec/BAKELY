@@ -1,0 +1,39 @@
+{% extends "base.html" %}{% load bakely_tags %}
+{% block title %}{{ p.nombre }} · BAKELY{% endblock %}
+{% block content %}
+<div class="container-xl pb-5 {% if p.linea == 'ALMIDON' %}linea-A{% else %}linea-B{% endif %}">
+  <p><a href="{% url 'core:catalogo' %}?tab={% if p.linea == 'BEBIDA' %}bebidas{% else %}almidones{% endif %}">Volver a la tienda</a></p>
+  <div class="row g-4">
+    <div class="col-lg-6">
+      <div class="glass prod-foto" style="border-radius:var(--r-panel)">
+        {% if p.imagen %}<img src="{{ p.imagen.url }}" alt="{{ p.imagen_alt|default:p.nombre }}">
+        {% else %}<div class="foto-pendiente"><i data-lucide="{{ p.linea|icono_linea }}"></i>{{ p.imagen_alt }}</div>{% endif %}
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <span class="linea-tag">{{ p.categoria.nombre }} · {{ p.codigo }}</span>
+      <h1 class="mt-1">{{ p.nombre }}</h1>
+      <p class="measure">{{ p.descripcion_tecnica }}</p>
+      <div class="d-flex align-items-center gap-3 my-3">
+        <span class="precio" style="font-size:2rem">${{ p.precio_venta }}</span>
+        {% if disponible %}<span class="pill pill-ok"><span class="dot"></span>Disponible</span>{% else %}<span class="pill pill-warn">Bajo pedido</span>{% endif %}
+      </div>
+      <form method="post" action="{% url 'core:carrito_agregar' p.codigo %}" class="d-flex gap-2 mb-4">{% csrf_token %}
+        <input type="number" name="cantidad" value="1" min="1" max="99" class="form-control glass-input" style="width:90px" aria-label="Cantidad">
+        <button class="btn-bk primario"><i data-lucide="shopping-bag"></i> Agregar al carrito</button>
+      </form>
+      <dl class="row small">
+        {% if p.notas_sensoriales %}<dt class="col-sm-4 dim fw-normal">{% if p.linea == 'BEBIDA' %}Notas de cata{% else %}Aspecto{% endif %}</dt><dd class="col-sm-8">{{ p.notas_sensoriales }}</dd>{% endif %}
+        {% if p.usos_recomendados %}<dt class="col-sm-4 dim fw-normal">Usos</dt><dd class="col-sm-8">{{ p.usos_recomendados }}</dd>{% endif %}
+        {% if p.alergenos %}<dt class="col-sm-4 dim fw-normal">Alérgenos y avisos</dt><dd class="col-sm-8">{{ p.alergenos }}</dd>{% endif %}
+        {% if p.presentacion %}<dt class="col-sm-4 dim fw-normal">Presentación</dt><dd class="col-sm-8">{{ p.presentacion }}</dd>{% endif %}
+        {% if p.graduacion_abv %}<dt class="col-sm-4 dim fw-normal">Graduación</dt><dd class="col-sm-8">{{ p.graduacion_abv|floatformat:"-1" }} % ABV</dd>{% endif %}
+        {% for k, v in p.parametros_tecnicos.items %}{% if k != 'requiere_pcc1' and k != 'tolerancia_abv' %}
+          <dt class="col-sm-4 dim fw-normal">{{ k|etiqueta }}</dt><dd class="col-sm-8">{{ v }}</dd>{% endif %}{% endfor %}
+      </dl>
+      <h2 class="h5 mt-4">Cómo se elabora</h2>
+      <ol class="timeline mt-3">{% for e in p.flujo_operativo %}<li>{{ e }}</li>{% endfor %}</ol>
+    </div>
+  </div>
+</div>
+{% endblock %}

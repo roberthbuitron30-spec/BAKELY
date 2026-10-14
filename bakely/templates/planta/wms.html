@@ -1,0 +1,71 @@
+{% extends "planta/base_planta.html" %}{% load bakely_tags %}
+{% block titulo_pagina %}Almacén WMS{% endblock %}
+{% block content %}
+<div class="main-head">
+  <div><h1>Almacén WMS</h1>
+    <p>Ubicaciones ZONA-RACK-NIVEL-POSICIÓN. Producto envasado sale por FEFO; materia prima por FIFO.</p></div>
+  <form class="d-flex gap-2" method="get">
+    <select name="zona" class="form-select glass-input" onchange="this.form.submit()" aria-label="Filtrar por zona">
+      <option value="">Todas las zonas</option>
+      {% for c, n in zonas %}<option value="{{ c }}" {% if c == zona_sel %}selected{% endif %}>{{ c }} · {{ n }}</option>{% endfor %}
+    </select>
+  </form>
+</div>
+
+<div class="grid-planta">
+  <section class="glass glass-pad span-6 {% if not puede_recibir %}zona-bloqueada{% endif %}" aria-labelledby="h-rec">
+    {% if not puede_recibir %}{% include "planta/_candado.html" with estacion="el operario de Recepción" %}{% endif %}
+    <h2 id="h-rec" class="panel-title">Recepción de materia prima <small>Crea el lote en cuarentena</small></h2>
+    <form method="post" action="{% url 'core:wms_recepcion' %}" class="row g-2">{% csrf_token %}
+      {% for f in rec_form %}<div class="col-sm-6"><label class="form-label" for="{{ f.id_for_label }}">{{ f.label }}</label>{{ f }}</div>{% endfor %}
+      <div class="col-12"><button class="btn-bk primario" {% if not puede_recibir %}disabled{% endif %}>Registrar recepción</button></div>
+    </form>
+  </section>
+
+  <section class="glass glass-pad span-6 {% if not puede_mover %}zona-bloqueada{% endif %}" aria-labelledby="h-mov">
+    {% if not puede_mover %}{% include "planta/_candado.html" with estacion="Almacén WMS y Despacho" %}{% endif %}
+    <h2 id="h-mov" class="panel-title">Movimiento de inventario <small>Transferencia, merma o ajuste</small></h2>
+    <form method="post" action="{% url 'core:wms_movimiento' %}" class="row g-2">{% csrf_token %}
+      {% for f in mov_form %}<div class="col-sm-6"><label class="form-label" for="{{ f.id_for_label }}">{{ f.label }}</label>{{ f }}</div>{% endfor %}
+      <div class="col-12"><button class="btn-bk primario" {% if not puede_mover %}disabled{% endif %}>Registrar en Kardex</button></div>
+    </form>
+  </section>
+
+  <section class="span-12" aria-labelledby="h-ubic">
+    <h2 id="h-ubic" class="panel-title">Mapa de ubicaciones</h2>
+    {% regroup ubicaciones by get_zona_display as por_zona %}
+    {% for z in por_zona %}
+      <div class="glass zona-card mb-3">
+        <h3 class="h6 mb-2">{{ z.list.0.zona }} · {{ z.grouper }}{% if z.list.0.acceso_restringido %} <span class="lock-chip"><i data-lucide="key-round"></i> acceso controlado</span>{% endif %}</h3>
+        <div class="ubic-grid">
+          {% for u in z.list %}
+            {% with exs=u.existencias.all %}
+            <div class="ubic {% for e in exs %}{% if e.cantidad > 0 %}ocupada{% endif %}{% endfor %}">
+              <code>{{ u.rack }}-{{ u.nivel }}-{{ u.posicion }}</code>
+              {% for e in exs %}{% if e.cantidad > 0 %}
+                <div><a href="{{ e.lote.get_absolute_url }}">{{ e.lote.codigo }}</a></div>
+                <div class="faint">{{ e.cantidad|dec:0 }} {{ e.lote.unidad }}{% if e.lote.fecha_caducidad %} · cad. {{ e.lote.fecha_caducidad|date:"d/m/y" }}{% endif %}</div>
+              {% endif %}{% empty %}<div class="faint">Libre</div>{% endfor %}
+            </div>
+            {% endwith %}
+          {% endfor %}
+        </div>
+      </div>
+    {% endfor %}
+  </section>
+
+  <section class="glass glass-pad span-12" aria-labelledby="h-kdx">
+    <h2 id="h-kdx" class="panel-title">Kardex reciente <a class="small" href="{% url 'core:exportar_kardex' 'xlsx' %}">Descargar Excel</a></h2>
+    <div class="tabla-scroll"><table class="tabla-bk">
+      <thead><tr><th>Fecha</th><th>Tipo</th><th>Lote</th><th>Cantidad</th><th>Origen</th><th>Destino</th><th>Saldo</th><th>Usuario</th></tr></thead>
+      <tbody>{% for m in kardex %}
+        <tr><td class="small">{{ m.fecha|date:"d/m H:i" }}</td><td>{{ m.get_tipo_display }}{% if m.motivo_merma %} <span class="faint small">({{ m.get_motivo_merma_display }})</span>{% endif %}</td>
+          <td><a href="{{ m.lote.get_absolute_url }}">{{ m.lote.codigo }}</a></td>
+          <td class="num">{% if m.signo > 0 %}+{% elif m.signo < 0 %}−{% endif %}{{ m.cantidad|dec:2 }} {{ m.unidad }}</td>
+          <td class="small">{{ m.ubicacion_origen|default:"—" }}</td><td class="small">{{ m.ubicacion_destino|default:"—" }}</td>
+          <td class="num">{{ m.saldo_lote|dec:2 }}</td><td>{{ m.usuario.username }}</td></tr>
+      {% empty %}<tr><td colspan="8" class="dim">Sin movimientos todavía.</td></tr>{% endfor %}</tbody>
+    </table></div>
+  </section>
+</div>
+{% endblock %}

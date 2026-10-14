@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Gránulo de almidón (anillos de crecimiento) + gota de destilado -->
+  <ellipse cx="25" cy="34" rx="17" ry="20" stroke="#E9E3D3" stroke-width="3"/>
+  <ellipse cx="25" cy="36" rx="10.5" ry="12.5" stroke="#E9E3D3" stroke-width="2" opacity=".6"/>
+  <ellipse cx="25" cy="38" rx="4.5" ry="5.5" fill="#E9E3D3" opacity=".85"/>
+  <path d="M45 8c0 0 13 15.5 13 25a13 13 0 0 1-26 0C32 23.5 45 8 45 8Z" fill="#D4943F" fill-opacity=".9"/>
+  <path d="M40 34a5 5 0 0 0 5 5" stroke="#0F172A" stroke-width="2.4" stroke-linecap="round" opacity=".55"/>
+</svg>

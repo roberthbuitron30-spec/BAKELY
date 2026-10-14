@@ -1,0 +1,28 @@
+{% load bakely_tags %}
+<article class="glass prod {% if p.linea == 'ALMIDON' %}linea-A{% else %}linea-B{% endif %}">
+  <a class="prod-foto" href="{{ p.get_absolute_url }}" tabindex="-1" aria-hidden="true">
+    {% if p.imagen %}
+      <img src="{{ p.imagen.url }}" alt="{{ p.imagen_alt|default:p.nombre }}" loading="lazy" width="1200" height="900">
+    {% else %}
+      <div class="foto-pendiente"><i data-lucide="{{ p.linea|icono_linea }}"></i>{{ p.imagen_alt }}</div>
+    {% endif %}
+  </a>
+  <div class="prod-body">
+    <span class="linea-tag">{{ p.categoria.nombre }}</span>
+    <h3><a href="{{ p.get_absolute_url }}" style="color:inherit;text-decoration:none">{{ p.nombre }}</a></h3>
+    <p class="desc">{{ p.descripcion_corta }}</p>
+    <div class="prod-meta">
+      {% if p.graduacion_abv %}<span>{{ p.graduacion_abv|floatformat:"-1" }} % ABV</span>{% endif %}
+      {% if p.parametros_tecnicos.humedad_max_pct %}<span>Humedad ≤ {{ p.parametros_tecnicos.humedad_max_pct }} %</span>{% endif %}
+      {% if p.presentacion %}<span>{{ p.presentacion }}</span>{% endif %}
+    </div>
+    <ul class="flujo-mini" aria-label="Proceso">{% for e in p.flujo_operativo %}<li>{{ e }}</li>{% endfor %}</ul>
+    <div class="d-flex align-items-center justify-content-between mt-2">
+      <span class="precio">${{ p.precio_venta }}{% if p.unidad_medida == 'kg' %}<small class="dim" style="font-size:.85rem"> /kg</small>{% endif %}</span>
+      <form method="post" action="{% url 'core:carrito_agregar' p.codigo %}">{% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <button class="btn-bk sm" type="submit"><i data-lucide="plus"></i> Agregar</button>
+      </form>
+    </div>
+  </div>
+</article>

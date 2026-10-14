@@ -1,0 +1,43 @@
+{% extends "base.html" %}{% load static %}
+{% block title %}{% block titulo_pagina %}Terminal{% endblock %} · BAKELY Planta{% endblock %}
+{% block body %}
+{% with n=request.resolver_match.url_name %}
+<div class="term">
+  <aside class="side" id="side" aria-label="Terminal de planta">
+    <a class="brand" href="{% url 'core:planta_dashboard' %}">
+      <img class="brand-mark" src="{% static 'img/bakely-mark.svg' %}" alt="">
+      <span><span class="brand-name">BAKELY</span><span class="brand-sub">Terminal de planta</span></span>
+    </a>
+    <nav>
+      <a href="{% url 'core:planta_dashboard' %}" {% if n == 'planta_dashboard' %}aria-current="page"{% endif %}><i data-lucide="gauge"></i> Tablero</a>
+      <a href="{% url 'core:ordenes' %}" {% if n == 'ordenes' or n == 'orden_detalle' or n == 'lote_detalle' %}aria-current="page"{% endif %}><i data-lucide="clipboard-list"></i> Órdenes y eBR</a>
+      <a href="{% url 'core:wms' %}" {% if n == 'wms' %}aria-current="page"{% endif %}><i data-lucide="warehouse"></i> Almacén WMS</a>
+      <a href="{% url 'core:despachos' %}" {% if 'despacho' in n %}aria-current="page"{% endif %}><i data-lucide="truck"></i> Despachos CEDI</a>
+      <a href="{% url 'core:reportes' %}" {% if n == 'reportes' %}aria-current="page"{% endif %}><i data-lucide="file-down"></i> Informes</a>
+      {% if es_admin %}
+        <span class="grupo">Dirección</span>
+        <a href="{% url 'core:usuarios' %}" {% if 'usuario' in n %}aria-current="page"{% endif %}><i data-lucide="users"></i> Usuarios</a>
+        <a href="{% url 'admin:index' %}"><i data-lucide="sliders-horizontal"></i> Maestros</a>
+      {% endif %}
+      <span class="grupo">Público</span>
+      <a href="{% url 'core:catalogo' %}"><i data-lucide="store"></i> Ver tienda</a>
+    </nav>
+    <div class="glass yo">
+      <strong>{{ user.get_full_name|default:user.username }}</strong>
+      <div class="estacion">
+        {% if es_admin %}<span class="pill pill-info">Administrador · edita todo</span>
+        {% elif mi_estacion %}<span class="edit-chip"><i data-lucide="pencil"></i> Edita: {{ user.perfil.get_estacion_display }}</span>
+        {% else %}<span class="lock-chip"><i data-lucide="lock"></i> Solo lectura</span>{% endif %}
+      </div>
+      <form method="post" action="{% url 'core:logout' %}" class="mt-2">{% csrf_token %}
+        <button class="btn-bk sm w-100" type="submit"><i data-lucide="log-out"></i> Cerrar sesión</button></form>
+    </div>
+  </aside>
+  <main class="main">
+    <button class="btn-bk sm menu-movil mb-3" type="button" onclick="document.getElementById('side').classList.toggle('abierta')" aria-controls="side"><i data-lucide="menu"></i> Menú</button>
+    {% for m in messages %}<div class="flash {{ m.tags }}" role="status">{{ m }}</div>{% endfor %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% endwith %}
+{% endblock %}

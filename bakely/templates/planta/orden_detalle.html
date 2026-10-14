@@ -1,0 +1,136 @@
+{% extends "planta/base_planta.html" %}{% load bakely_tags %}
+{% block titulo_pagina %}{{ orden.codigo }}{% endblock %}
+{% block content %}
+<div class="main-head {% if orden.linea == 'ALMIDON' %}linea-A{% else %}linea-B{% endif %}">
+  <div>
+    <span class="linea-tag">{{ orden.get_linea_display }}</span>
+    <h1>{{ orden.codigo }} · {{ orden.producto.nombre }}</h1>
+    <p>{{ orden.cantidad_planificada|floatformat:0 }} {{ orden.unidad }} planificados · etapa actual: {{ orden.get_etapa_actual_display }} · {{ orden.get_estado_display }}</p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    {% for l in lotes %}<a class="btn-bk sm" href="{{ l.get_absolute_url }}"><i data-lucide="package"></i> {{ l.codigo }}</a>{% endfor %}
+  </div>
+</div>
+
+<div class="grid-planta">
+  <section class="glass glass-pad span-5" aria-labelledby="h-bal">
+    <h2 id="h-bal" class="panel-title">Balance de materia <small>Calculado desde Kardex y PCC-1</small></h2>
+    <dl class="row small mb-0">
+      <dt class="col-7 dim fw-normal">Entrada (consumo)</dt><dd class="col-5 num">{{ balance.entrada|dec:2 }}</dd>
+      <dt class="col-7 dim fw-normal">Producto obtenido</dt><dd class="col-5 num">{{ balance.salida|dec:2 }}</dd>
+      <dt class="col-7 dim fw-normal">Mermas registradas</dt><dd class="col-5 num">{{ balance.merma|dec:2 }}</dd>
+      {% if balance.rendimiento_pct is not None %}<dt class="col-7 dim fw-normal">Rendimiento</dt><dd class="col-5 num">{{ balance.rendimiento_pct|dec:1 }} %</dd>{% endif %}
+      {% if balance.lap_carga %}
+        <dt class="col-7 dim fw-normal">Alcohol puro cargado (LAP)</dt><dd class="col-5 num">{{ balance.lap_carga|dec:2 }} L</dd>
+        <dt class="col-7 dim fw-normal">LAP recuperado en corazón</dt><dd class="col-5 num">{{ balance.lap_corazon|dec:2 }} L</dd>
+        <dt class="col-7 dim fw-normal">Recuperación en corazón</dt><dd class="col-5 num">{{ balance.recuperacion_corazon_pct|dec:1 }} %</dd>
+        <dt class="col-7 dim fw-normal">Pérdida de alcohol</dt><dd class="col-5 num">{{ balance.perdida_lap_pct|dec:1 }} %</dd>
+      {% endif %}
+    </dl>
+  </section>
+
+  <section class="glass glass-pad span-7" aria-labelledby="h-iot">
+    <h2 id="h-iot" class="panel-title">Variables IoT de la orden <small>{{ orden.equipo.codigo|default:"sin equipo" }}</small></h2>
+    {% if serie_iot %}<canvas id="grafico" height="170" aria-label="Serie temporal de sensores"></canvas>
+    {% else %}<p class="dim m-0">Aún no hay lecturas asociadas. Las lecturas se vinculan solas cuando la orden está en proceso en su equipo.</p>{% endif %}
+  </section>
+
+  <section class="glass glass-pad span-12" aria-labelledby="h-ebr">
+    <h2 id="h-ebr" class="panel-title">Registro electrónico de lote (eBR) <small>Los registros firmados no se editan; las correcciones se registran como una nueva entrada.</small></h2>
+    <div class="tabla-scroll"><table class="tabla-bk">
+      <thead><tr><th>Fecha</th><th>Estación · Etapa</th><th>Control</th><th>Variables</th><th>Resultado</th><th>Registró</th><th>Aprobación</th></tr></thead>
+      <tbody>{% for r in registros %}
+        <tr>
+          <td class="small">{{ r.fecha|date:"d/m H:i" }}</td>
+          <td><strong>{{ r.etapa }}</strong><div class="faint small">{{ r.get_estacion_display }}</div></td>
+          <td>{{ r.control }}</td>
+          <td class="small">{% for k, v in r.variables.items %}{{ k }}: <strong>{{ v }}</strong><br>{% endfor %}
+            {% if r.corte %}Corazón {{ r.corte.corazon_l }} L @ {{ r.corte.abv_corazon }} % · cabezas {{ r.corte.cabezas_l }} L · colas {{ r.corte.colas_l }} L<br>Metanol {{ r.corte.metanol_mg_100ml_aa|default:"—" }} mg/100 mL a.a.{% endif %}</td>
+          <td>{% if r.conforme %}<span class="pill pill-ok">Conforme</span>{% else %}<span class="pill pill-alert">No conforme</span>
+            <div class="small mt-1" style="color:var(--c-alert)">{{ r.desviaciones|join:"; " }}</div>{% endif %}</td>
+          <td class="small">{{ r.registrado_por.username }}</td>
+          <td class="small">{% if r.aprobado_por %}{{ r.aprobado_por.username }}{% elif es_admin %}
+            <form method="post" action="{% url 'core:aprobar_registro' r.pk %}">{% csrf_token %}<button class="btn-bk sm ok">Aprobar</button></form>
+            {% else %}<span class="faint">Pendiente</span>{% endif %}</td>
+        </tr>
+      {% empty %}<tr><td colspan="7" class="dim">Esta orden aún no tiene registros.</td></tr>{% endfor %}</tbody>
+    </table></div>
+  </section>
+
+  <section class="glass glass-pad span-7 {% if not puede_registrar %}zona-bloqueada{% endif %}" aria-labelledby="h-reg">
+    {% if not puede_registrar %}{% include "planta/_candado.html" with estacion="los operarios con estación activa" %}{% endif %}
+    <h2 id="h-reg" class="panel-title">Registrar etapa
+      <small>{% if es_admin %}Puedes registrar en cualquier estación{% else %}Solo se guarda si la estación es la tuya{% endif %}</small></h2>
+    <form method="post" action="{% url 'core:registrar_etapa' orden.pk %}" class="row g-2" id="form-etapa">{% csrf_token %}
+      {% for f in form %}
+        <div class="{% if f.name == 'variables_texto' or f.name == 'observaciones' %}col-12{% else %}col-sm-6 col-lg-4{% endif %}">
+          <label class="form-label" for="{{ f.id_for_label }}">{{ f.label }}</label>{{ f }}
+          {% if f.help_text %}<div class="form-text">{{ f.help_text }}</div>{% endif %}</div>
+      {% endfor %}
+      <div class="col-12 form-text">Variables esperadas — PC-1: humedad_pct, impurezas_pct, materia_seca_pct · PC-2: temp_secado_c, humedad_final_pct · PC-3: brix_inicial, ph, temp_c. Para PCC-1 completa también el panel de cortes.</div>
+
+      <fieldset class="col-12 mt-2 {% if not puede_pcc1 %}zona-bloqueada{% endif %}" id="pcc1" style="border:1px solid var(--c-border);border-radius:10px;padding:1rem">
+        {% if not puede_pcc1 %}{% include "planta/_candado.html" with estacion="Destilación y Licores" %}{% endif %}
+        <legend class="h6 px-2 w-auto" style="float:none;font-size:1rem">PCC-1 · Cortes de destilación</legend>
+        <div class="row g-2">
+          {% for f in corte_form %}<div class="col-6 col-lg-3"><label class="form-label" for="{{ f.id_for_label }}">{{ f.label }}</label>{{ f }}</div>{% endfor %}
+        </div>
+      </fieldset>
+      <div class="col-12"><button class="btn-bk primario" {% if not puede_registrar %}disabled{% endif %}><i data-lucide="pen-line"></i> Firmar y registrar</button></div>
+    </form>
+  </section>
+
+  <section class="glass glass-pad span-5" aria-labelledby="h-cuidado">
+    <h2 id="h-cuidado" class="panel-title">Especificaciones de control</h2>
+    <table class="tabla-bk small">
+      <tbody>
+        <tr><td>PC-1 Recepción</td><td>Humedad ≤ 82 %, impurezas ≤ 3 %, materia seca ≥ 18 %</td></tr>
+        <tr><td>PC-2 Secado</td><td>45–50 °C, humedad final ≤ 12 %</td></tr>
+        <tr><td>PC-3 Inoculación</td><td>pH 3,8–4,2 · 22–26 °C · Brix 14–24</td></tr>
+        <tr><td>PCC-1 Destilación</td><td>Cabezas separadas, corazón 55–80 % ABV, metanol ≤ límite parametrizado</td></tr>
+      </tbody>
+    </table>
+    <p class="faint small mt-2 mb-0">Valide los límites de metanol contra la norma INEN vigente antes de producción.</p>
+  </section>
+</div>
+{{ serie_iot|json_script:"serie-iot" }}
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+(() => {
+  // Muestra el panel PCC-1 solo cuando el control elegido es PCC-1
+  const ctrl = document.getElementById("id_control"), pcc = document.getElementById("pcc1");
+  const sync = () => { pcc.hidden = ctrl && ctrl.value !== "PCC-1"; };
+  ctrl && ctrl.addEventListener("change", sync); sync();
+
+  const datos = JSON.parse(document.getElementById("serie-iot").textContent || "{}");
+  const cv = document.getElementById("grafico");
+  if (cv && !window.Chart) { cv.outerHTML = '<p class="dim m-0">No se pudo cargar la librería de gráficos. Revisa la conexión a internet del terminal.</p>'; return; }
+  if (!cv) return;
+  const css = getComputedStyle(document.documentElement);
+  const paleta = [css.getPropertyValue("--c-info"), css.getPropertyValue("--c-cobre"), css.getPropertyValue("--c-ok"), css.getPropertyValue("--c-almidon")];
+  const nombres = {TEMP: "Temperatura °C", PH: "pH", BRIX: "Brix", TVAP: "Vapor °C", ABV: "% ABV", HUM: "Humedad %", DENS: "Densidad"};
+  const ejes = {};
+  const series = Object.entries(datos).map(([v, pts], i) => {
+    const eje = v === "PH" ? "y1" : "y"; ejes[eje] = true;
+    return {label: nombres[v] || v, data: pts.map(([t, y]) => ({x: Date.parse(t), y})), borderColor: paleta[i % 4].trim(),
+            borderWidth: 1.6, pointRadius: 0, tension: .3, yAxisID: eje};
+  });
+  Chart.defaults.color = css.getPropertyValue("--c-text-dim").trim();
+  Chart.defaults.font.family = "Barlow";
+  new Chart(cv, {type: "line", data: {datasets: series}, options: {
+    animation: false, parsing: false, interaction: {mode: "index", intersect: false},
+    scales: {
+      x: {type: "linear", ticks: {callback: v => new Date(v).toLocaleTimeString("es-EC", {hour: "2-digit", minute: "2-digit"}), maxTicksLimit: 8},
+          grid: {color: "rgba(148,163,184,.08)"}},
+      y: {grid: {color: "rgba(148,163,184,.08)"}},
+      ...(ejes.y1 ? {y1: {position: "right", grid: {display: false}, title: {display: true, text: "pH"}}} : {})
+    },
+    plugins: {legend: {position: "bottom", labels: {boxWidth: 12}},
+      tooltip: {callbacks: {title: it => new Date(it[0].parsed.x).toLocaleString("es-EC")}}}
+  }});
+})();
+</script>
+{% endblock %}

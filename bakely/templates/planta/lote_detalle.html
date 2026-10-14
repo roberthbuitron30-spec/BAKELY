@@ -1,0 +1,74 @@
+{% extends "planta/base_planta.html" %}{% load bakely_tags %}
+{% block titulo_pagina %}Lote {{ lote.codigo }}{% endblock %}
+{% block content %}
+<div class="main-head">
+  <div>
+    <span class="dim small">{{ lote.get_tipo_display }}</span>
+    <h1>Lote {{ lote.codigo }}</h1>
+    <p>{{ lote.producto.nombre }} · {{ lote.cantidad_inicial|dec:2 }} {{ lote.unidad }} · elaborado {{ lote.fecha_elaboracion|date:"d M Y" }}{% if lote.fecha_caducidad %} · caduca {{ lote.fecha_caducidad|date:"d M Y" }}{% endif %}</p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a class="btn-bk sm" href="{% url 'core:exportar_ebr' lote.codigo %}"><i data-lucide="file-text"></i> Informe eBR (PDF)</a>
+    {% if lote.tipo == 'PT' %}<a class="btn-bk sm" href="{% url 'core:trazabilidad_detalle' lote.qr_token %}" target="_blank" rel="noopener"><i data-lucide="qr-code"></i> Vista del cliente</a>{% endif %}
+  </div>
+</div>
+
+<div class="grid-planta">
+  <section class="glass glass-pad span-5 {{ lote.estado|estado_css }}" aria-labelledby="h-cal">
+    <h2 id="h-cal" class="panel-title">Calidad y liberación <span class="pill {% if lote.estado == 'LIBERADO' %}pill-ok{% elif lote.estado == 'CUARENTENA' %}pill-warn{% elif lote.estado == 'AGOTADO' %}pill-muted{% else %}pill-alert{% endif %}">{{ lote.get_estado_display }}</span></h2>
+    <dl class="row small">
+      <dt class="col-6 dim fw-normal">Humedad final</dt><dd class="col-6 num">{% if lote.humedad_final_pct is not None %}{{ lote.humedad_final_pct|dec:2 }} %{% else %}—{% endif %}</dd>
+      <dt class="col-6 dim fw-normal">Cenizas</dt><dd class="col-6 num">{% if lote.cenizas_pct is not None %}{{ lote.cenizas_pct|dec:2 }} %{% else %}—{% endif %}</dd>
+      <dt class="col-6 dim fw-normal">ABV final</dt><dd class="col-6 num">{% if lote.abv_final is not None %}{{ lote.abv_final|dec:2 }} %{% else %}—{% endif %}</dd>
+      <dt class="col-6 dim fw-normal">PCC-1</dt><dd class="col-6">{% if lote.pcc1_conforme %}<span class="pill pill-ok">Conforme</span>{% elif lote.pcc1_conforme is False %}<span class="pill pill-alert">No conforme</span>{% else %}—{% endif %}</dd>
+      <dt class="col-6 dim fw-normal">Certificado</dt><dd class="col-6">{{ lote.certificado_inocuidad|default:"—" }}</dd>
+      <dt class="col-6 dim fw-normal">Liberado por</dt><dd class="col-6">{{ lote.liberado_por.username|default:"—" }} {{ lote.fecha_liberacion|date:"d/m/Y H:i" }}</dd>
+      <dt class="col-6 dim fw-normal">Existencia actual</dt><dd class="col-6 num">{{ lote.stock_actual|dec:2 }} {{ lote.unidad }}</dd>
+    </dl>
+    {% if motivos %}<div class="flash warning small"><strong>Pendiente para liberar:</strong> {{ motivos|join:" " }}</div>{% endif %}
+
+    <div class="{% if not es_admin %}zona-bloqueada{% endif %} mt-2" style="border-radius:10px;min-height:120px">
+      {% if not es_admin %}{% include "planta/_candado.html" with estacion="la Dirección de Planta (liberación de lotes)" %}{% endif %}
+      <form method="post" action="{% url 'core:lote_liberar' lote.codigo %}" class="d-flex flex-column gap-2">{% csrf_token %}
+        <input class="form-control glass-input" name="motivo" placeholder="Motivo u observación (obligatorio si retienes o fuerzas)" {% if not es_admin %}disabled{% endif %}>
+        <div class="d-flex flex-wrap gap-2">
+          <button class="btn-bk ok sm" name="accion" value="liberar" {% if not es_admin %}disabled{% endif %}>Liberar lote</button>
+          {% if not liberable %}<label class="small d-flex gap-1 align-items-center m-0"><input type="checkbox" name="forzar" value="1" {% if not es_admin %}disabled{% endif %}> Forzar liberación (queda en bitácora)</label>{% endif %}
+          <button class="btn-bk peligro sm" name="accion" value="retener" {% if not es_admin %}disabled{% endif %}>Retener</button>
+          <button class="btn-bk peligro sm" name="accion" value="rechazar" {% if not es_admin %}disabled{% endif %}>Rechazar</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <section class="glass glass-pad span-7" aria-labelledby="h-gen">
+    <h2 id="h-gen" class="panel-title">Genealogía y ubicación</h2>
+    <div class="row g-3 small">
+      <div class="col-md-6"><h3 class="h6 dim">Proviene de</h3>
+        {% for o in lote.lotes_origen.all %}<div><a href="{{ o.get_absolute_url }}">{{ o.codigo }}</a> · {{ o.producto.nombre }}<span class="faint"> · {{ o.proveedor }}</span></div>
+        {% empty %}<p class="faint">Sin lotes de origen vinculados.</p>{% endfor %}
+        <h3 class="h6 dim mt-3">Se usó en</h3>
+        {% for o in lote.lotes_derivados.all %}<div><a href="{{ o.get_absolute_url }}">{{ o.codigo }}</a> · {{ o.producto.nombre }}</div>
+        {% empty %}<p class="faint">Aún no se usa en otro lote.</p>{% endfor %}</div>
+      <div class="col-md-6"><h3 class="h6 dim">Dónde está</h3>
+        {% for e in existencias %}<div class="d-flex justify-content-between"><span>{{ e.ubicacion.codigo }}</span><span class="num">{{ e.cantidad|dec:2 }}</span></div>
+        {% empty %}<p class="faint">Sin existencias.</p>{% endfor %}
+        {% if total_unidades %}<h3 class="h6 dim mt-3">Unidades serializadas</h3><p>{{ total_unidades }} botellas/sacos con QR propio. Ej.: {% for u in unidades|slice:":3" %}<span class="num">{{ u.serial }}</span>{% if not forloop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+      </div>
+    </div>
+  </section>
+
+  <section class="glass glass-pad span-12" aria-labelledby="h-mov">
+    <h2 id="h-mov" class="panel-title">Movimientos del lote</h2>
+    <div class="tabla-scroll"><table class="tabla-bk">
+      <thead><tr><th>Fecha</th><th>Tipo</th><th>Cantidad</th><th>Origen → Destino</th><th>Saldo</th><th>Usuario</th><th>Ref.</th></tr></thead>
+      <tbody>{% for m in movimientos %}
+        <tr><td class="small">{{ m.fecha|date:"d/m/Y H:i" }}</td><td>{{ m.get_tipo_display }}</td>
+          <td class="num">{{ m.cantidad|dec:2 }} {{ m.unidad }}</td>
+          <td class="small">{{ m.ubicacion_origen|default:"—" }} → {{ m.ubicacion_destino|default:"—" }}</td>
+          <td class="num">{{ m.saldo_lote|dec:2 }}</td><td>{{ m.usuario.username }}</td><td class="small">{{ m.referencia }}</td></tr>
+      {% empty %}<tr><td colspan="7" class="dim">Sin movimientos.</td></tr>{% endfor %}</tbody>
+    </table></div>
+  </section>
+</div>
+{% endblock %}

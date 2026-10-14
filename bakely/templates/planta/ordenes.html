@@ -1,0 +1,26 @@
+{% extends "planta/base_planta.html" %}
+{% block titulo_pagina %}Órdenes{% endblock %}
+{% block content %}
+<div class="main-head">
+  <div><h1>Órdenes de producción</h1><p>Abre una orden para ver y registrar su eBR.</p></div>
+  <div class="d-flex gap-2">
+    <a class="btn-bk sm" href="?">Todas</a>
+    <a class="btn-bk sm linea-A" href="?linea=ALMIDON"><span class="linea-tag">Almidones</span></a>
+    <a class="btn-bk sm linea-B" href="?linea=BEBIDA"><span class="linea-tag">Licores y bebidas</span></a>
+  </div>
+</div>
+<div class="glass glass-pad tabla-scroll">
+  <table class="tabla-bk">
+    <thead><tr><th>Orden</th><th>Producto</th><th>Planificado</th><th>Etapa</th><th>Equipo</th><th>Estado</th><th>Fecha</th></tr></thead>
+    <tbody>{% for o in ordenes %}
+      <tr class="{% if o.linea == 'ALMIDON' %}linea-A{% else %}linea-B{% endif %}">
+        <td><a class="num" href="{{ o.get_absolute_url }}">{{ o.codigo }}</a></td>
+        <td><span class="linea-tag">{{ o.producto.nombre }}</span></td>
+        <td class="num">{{ o.cantidad_planificada|floatformat:0 }} {{ o.unidad }}</td>
+        <td>{{ o.get_etapa_actual_display }}</td><td>{{ o.equipo.codigo|default:"—" }}</td>
+        <td><span class="pill {% if o.estado == 'PROC' %}pill-info{% elif o.estado == 'CERRADA' %}pill-ok{% elif o.estado == 'ANULADA' %}pill-alert{% else %}pill-muted{% endif %}">{{ o.get_estado_display }}</span></td>
+        <td class="small">{{ o.fecha_planificada|date:"d M Y" }}</td></tr>
+    {% empty %}<tr><td colspan="7" class="dim">No hay órdenes registradas.</td></tr>{% endfor %}</tbody>
+  </table>
+</div>
+{% endblock %}

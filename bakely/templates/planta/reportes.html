@@ -1,0 +1,60 @@
+{% extends "planta/base_planta.html" %}
+{% block titulo_pagina %}Informes{% endblock %}
+{% block content %}
+<div class="main-head"><div><h1>Informes y auditoría</h1><p>Cada descarga queda registrada en la bitácora.</p></div></div>
+
+<form class="glass glass-pad d-flex flex-wrap gap-3 align-items-end mb-3" method="get" id="rango">
+  <div><label class="form-label" for="desde">Desde</label><input class="form-control glass-input" type="date" id="desde" name="desde"></div>
+  <div><label class="form-label" for="hasta">Hasta</label><input class="form-control glass-input" type="date" id="hasta" name="hasta"></div>
+  <p class="form-text m-0">El periodo aplica a Kardex y bitácora. Sin fechas: mes en curso.</p>
+</form>
+
+<div class="grid-planta">
+  <section class="glass glass-pad span-6" aria-labelledby="h1r">
+    <h2 id="h1r" class="panel-title">Informe oficial de lote (eBR) <small>PDF con membrete UPEC y firmas</small></h2>
+    <div class="tabla-scroll" style="max-height:340px"><table class="tabla-bk">
+      <tbody>{% for l in lotes %}<tr><td class="num">{{ l.codigo }}</td><td class="small">{{ l.producto.nombre }}</td><td><span class="pill pill-muted">{{ l.get_estado_display }}</span></td>
+        <td><a class="btn-bk sm" href="{% url 'core:exportar_ebr' l.codigo %}">PDF</a></td></tr>
+      {% empty %}<tr><td class="dim">No hay lotes de producto terminado.</td></tr>{% endfor %}</tbody>
+    </table></div>
+  </section>
+
+  <section class="glass glass-pad span-6 {% if not es_admin %}zona-bloqueada{% endif %}" aria-labelledby="h2r">
+    {% if not es_admin %}{% include "planta/_candado.html" with estacion="la Dirección de Planta" %}{% endif %}
+    <h2 id="h2r" class="panel-title">Bitácora de auditoría de operarios <small>{{ sobrescrituras }} sobrescritura{{ sobrescrituras|pluralize }} administrativa{{ sobrescrituras|pluralize }}</small></h2>
+    <p class="dim small">Fecha y hora, usuario, cambios campo por campo (antes → después), intentos denegados y sobrescrituras del administrador resaltadas.</p>
+    <div class="d-flex gap-2 flex-wrap">
+      <a class="btn-bk sm con-rango" href="{% url 'core:exportar_auditoria' 'xlsx' %}"><i data-lucide="sheet"></i> Excel</a>
+      <a class="btn-bk sm con-rango" href="{% url 'core:exportar_auditoria' 'csv' %}">CSV</a>
+      <a class="btn-bk sm con-rango" href="{% url 'core:exportar_auditoria' 'xlsx' %}?solo_sobrescrituras=1">Solo sobrescrituras</a>
+    </div>
+    {% if es_admin %}<h3 class="h6 dim mt-3">Últimos eventos</h3>
+      {% for e in ultimos_eventos %}<div class="small d-flex justify-content-between gap-2 {% if e.sobrescritura_admin %}text-warning{% endif %}">
+        <span>{{ e.timestamp|date:"d/m H:i" }} · {{ e.username }} · {{ e.get_accion_display }}</span><span class="faint text-truncate">{{ e.objeto_repr|default:e.detalle }}</span></div>{% endfor %}{% endif %}
+  </section>
+
+  <section class="glass glass-pad span-6" aria-labelledby="h3r">
+    <h2 id="h3r" class="panel-title">Kardex y rendimiento WMS <small>Entradas, salidas, mermas e IRA</small></h2>
+    <p class="dim small">El Excel incluye hojas de Kardex, rendimiento por orden, existencias con días a caducar y conteos cíclicos con fórmulas de IRA.</p>
+    <div class="d-flex gap-2"><a class="btn-bk sm con-rango" href="{% url 'core:exportar_kardex' 'xlsx' %}"><i data-lucide="sheet"></i> Excel</a>
+      <a class="btn-bk sm con-rango" href="{% url 'core:exportar_kardex' 'pdf' %}"><i data-lucide="file-text"></i> PDF</a></div>
+  </section>
+
+  <section class="glass glass-pad span-6" aria-labelledby="h4r">
+    <h2 id="h4r" class="panel-title">Manifiesto de carga al CEDI <small>PDF y JSON</small></h2>
+    {% for d in despachos %}<div class="d-flex justify-content-between align-items-center small mb-2"><span class="num">{{ d.codigo }} <span class="faint">· {{ d.get_estado_display }}</span></span>
+      <span class="d-flex gap-2"><a class="btn-bk sm" href="{% url 'core:exportar_manifiesto' d.pk 'pdf' %}">PDF</a><a class="btn-bk sm" href="{% url 'core:exportar_manifiesto' d.pk 'json' %}">JSON</a></span></div>
+    {% empty %}<p class="dim small">Sin despachos.</p>{% endfor %}
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+// Añade el rango de fechas elegido a los enlaces de descarga
+document.querySelectorAll("a.con-rango").forEach(a => a.addEventListener("click", e => {
+  const u = new URL(a.href);
+  ["desde", "hasta"].forEach(k => { const v = document.getElementById(k).value; if (v) u.searchParams.set(k, v); });
+  a.href = u.toString();
+}));
+</script>
+{% endblock %}

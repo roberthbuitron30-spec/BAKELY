@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Acceso restringido · BAKELY{% endblock %}
+{% block content %}
+<div class="container-xl py-5">
+  <div class="glass glass-pad glow-warn measure">
+    <h1 class="h3"><i data-lucide="lock"></i> Acceso restringido</h1>
+    <p>{{ exception|default:"Tu usuario no tiene permiso para esta acción." }}</p>
+    <p class="dim small">El intento quedó registrado en la bitácora de auditoría.</p>
+    <a class="btn-bk" href="javascript:history.back()">Volver</a>
+  </div>
+</div>
+{% endblock %}

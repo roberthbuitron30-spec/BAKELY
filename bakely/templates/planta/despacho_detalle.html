@@ -1,0 +1,48 @@
+{% extends "planta/base_planta.html" %}{% load bakely_tags %}
+{% block titulo_pagina %}{{ d.codigo }}{% endblock %}
+{% block content %}
+<div class="main-head">
+  <div><h1>Despacho {{ d.codigo }}</h1>
+    <p>Hacia {{ d.cedi_destino }} · {{ d.fecha_programada|date:"d M Y H:i" }} · {{ d.transportista }} {{ d.placa_vehiculo }} · <span class="pill {% if d.estado == 'ERROR' %}pill-alert{% elif d.estado == 'PREP' %}pill-warn{% else %}pill-ok{% endif %}">{{ d.get_estado_display }}</span></p></div>
+  <div class="d-flex gap-2">
+    <a class="btn-bk sm" href="{% url 'core:exportar_manifiesto' d.pk 'pdf' %}"><i data-lucide="file-text"></i> Manifiesto PDF</a>
+    <a class="btn-bk sm" href="{% url 'core:exportar_manifiesto' d.pk 'json' %}"><i data-lucide="braces"></i> Contrato JSON</a>
+  </div>
+</div>
+<div class="grid-planta">
+  <section class="glass glass-pad span-7 {% if not puede_editar %}zona-bloqueada{% endif %}" aria-labelledby="h-pick">
+    {% if not puede_editar %}{% include "planta/_candado.html" with estacion="Almacén WMS y Despacho" %}{% endif %}
+    <h2 id="h-pick" class="panel-title">Picking <small>Marca cada línea al cargarla</small></h2>
+    <div class="tabla-scroll"><table class="tabla-bk">
+      <thead><tr><th>Lote</th><th>Producto</th><th>Cantidad</th><th>Desde</th><th>Palet/caja</th><th>Cargado</th></tr></thead>
+      <tbody>{% for x in detalles %}
+        <tr><td><a href="{{ x.lote.get_absolute_url }}">{{ x.lote.codigo }}</a>{% if x.lote.estado != 'LIBERADO' %} <span class="pill pill-alert">{{ x.lote.get_estado_display }}</span>{% endif %}</td>
+          <td>{{ x.lote.producto.nombre }}</td><td class="num">{{ x.cantidad|dec:0 }} {{ x.lote.unidad }}<div class="faint small">{{ x.unidades_empaque }} empaques</div></td>
+          <td class="small">{{ x.ubicacion_origen.codigo }}</td><td class="small">{{ x.codigo_palet|default:"—" }}</td>
+          <td>{% if d.estado == 'PREP' or d.estado == 'LISTO' %}
+            <form method="post" action="{% url 'core:despacho_accion' d.pk %}">{% csrf_token %}<input type="hidden" name="accion" value="pick"><input type="hidden" name="detalle" value="{{ x.pk }}">
+              <button class="btn-bk sm {% if x.pickeado %}ok{% endif %}" {% if not puede_editar %}disabled{% endif %} aria-pressed="{{ x.pickeado|yesno:'true,false' }}">{% if x.pickeado %}<i data-lucide="check"></i> Cargado{% else %}Marcar{% endif %}</button></form>
+            {% else %}{{ x.pickeado|yesno:"Sí,No" }}{% endif %}</td></tr>
+      {% endfor %}</tbody>
+    </table></div>
+    {% if d.estado == 'PREP' or d.estado == 'LISTO' or d.estado == 'ERROR' %}
+    <form method="post" action="{% url 'core:despacho_accion' d.pk %}" class="mt-3">{% csrf_token %}
+      <input type="hidden" name="accion" value="confirmar">
+      <button class="btn-bk primario" {% if not puede_editar %}disabled{% endif %}><i data-lucide="send"></i> Confirmar salida y enviar al CEDI</button>
+      <p class="form-text mt-1">Descarga el inventario en Kardex, congela el contrato y lo envía al endpoint configurado del CEDI.</p>
+    </form>{% endif %}
+  </section>
+  <section class="glass glass-pad span-5" aria-labelledby="h-json">
+    <h2 id="h-json" class="panel-title">Contrato <code>despacho_planta_hacia_cedi</code> <small>{% if d.payload_enviado %}enviado{% else %}vista previa{% endif %}</small></h2>
+    <pre class="json-view" id="json"></pre>
+    {% if d.respuesta_cedi %}<h3 class="h6 mt-3">Respuesta del CEDI</h3><pre class="json-view" id="resp"></pre>{% endif %}
+  </section>
+</div>
+{{ contrato|json_script:"contrato" }}{{ d.respuesta_cedi|json_script:"respuesta" }}
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById("json").textContent = JSON.stringify(JSON.parse(document.getElementById("contrato").textContent), null, 2);
+const r = document.getElementById("resp"); if (r) r.textContent = JSON.stringify(JSON.parse(document.getElementById("respuesta").textContent), null, 2);
+</script>
+{% endblock %}

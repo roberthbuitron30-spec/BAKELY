@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Carrito · BAKELY{% endblock %}
+{% block content %}
+<div class="container-xl pb-5">
+  <h1>Carrito</h1>
+  {% if items %}
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <div class="glass glass-pad tabla-scroll">
+        <table class="tabla-bk">
+          <thead><tr><th>Producto</th><th>Cant.</th><th>Precio</th><th>Subtotal</th><th></th></tr></thead>
+          <tbody>
+          {% for i in items %}
+            <tr><td>{{ i.p.nombre }}</td><td class="num">{{ i.cantidad }}</td><td>${{ i.p.precio_venta }}</td>
+              <td class="num">${{ i.subtotal|floatformat:2 }}</td>
+              <td><form method="post" action="{% url 'core:carrito_quitar' i.p.codigo %}">{% csrf_token %}
+                <button class="btn-bk sm peligro" aria-label="Quitar {{ i.p.nombre }}"><i data-lucide="x"></i></button></form></td></tr>
+          {% endfor %}
+          </tbody>
+          <tfoot><tr><td colspan="3" class="dim">Total</td><td class="num" style="font-size:1.3rem">${{ total|floatformat:2 }}</td><td></td></tr></tfoot>
+        </table>
+      </div>
+    </div>
+    <div class="col-lg-5">
+      <form method="post" class="glass glass-pad">{% csrf_token %}
+        <h2 class="h5">Datos de entrega</h2>
+        {{ form.non_field_errors }}
+        {% for f in form %}{% if f.name != 'declara_mayor_edad' %}
+          <div class="mb-2"><label class="form-label" for="{{ f.id_for_label }}">{{ f.label }}</label>{{ f }}{{ f.errors }}</div>
+        {% endif %}{% endfor %}
+        {% if requiere_edad %}
+          <div class="my-3 d-flex gap-2 align-items-start">{{ form.declara_mayor_edad }}
+            <label for="{{ form.declara_mayor_edad.id_for_label }}" class="m-0" style="color:var(--c-text)">{{ form.declara_mayor_edad.label }}</label></div>
+          {{ form.declara_mayor_edad.errors }}
+        {% endif %}
+        <button class="btn-bk primario w-100 mt-2">Confirmar pedido</button>
+      </form>
+    </div>
+  </div>
+  {% else %}
+    <div class="glass glass-pad"><p class="m-0">Tu carrito está vacío. <a href="{% url 'core:catalogo' %}">Ver productos en la tienda</a></p></div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% load static %}<!doctype html>
+<html lang="es" {% block tema %}{% endblock %}>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}BAKELY · Planta de Almidones y Licores UPEC{% endblock %}</title>
+  <meta name="description" content="Almidones andinos y licores artesanales de la UPEC con trazabilidad lote a lote.">
+  <link rel="icon" href="{% static 'img/bakely-mark.svg' %}" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap-grid.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap-utilities.min.css" rel="stylesheet">
+  <link href="{% static 'css/bakely.css' %}" rel="stylesheet">
+  {% block head %}{% endblock %}
+</head>
+<body>
+{% block body %}
+  <header class="topbar">
+    <a class="brand" href="{% url 'core:landing' %}">
+      <img class="brand-mark" src="{% static 'img/bakely-mark.svg' %}" alt="">
+      <span><span class="brand-name">BAKELY</span><span class="brand-sub">Planta de Almidones y Licores · UPEC</span></span>
+    </a>
+    <nav class="nav-pub" aria-label="Principal">
+      <a href="{% url 'core:catalogo' %}" {% if request.resolver_match.url_name == 'catalogo' %}aria-current="page"{% endif %}>Tienda</a>
+      <a href="{% url 'core:trazabilidad' %}" {% if 'trazabilidad' in request.resolver_match.url_name %}aria-current="page"{% endif %}>Rastrear mi producto</a>
+      <a href="{% url 'core:carrito' %}" aria-label="Carrito, {{ carrito_items }} productos"><i data-lucide="shopping-bag"></i>{% if carrito_items %} <span class="cart-count">{{ carrito_items }}</span>{% endif %}</a>
+      {% if es_personal_planta %}<a href="{% url 'core:planta_dashboard' %}"><i data-lucide="gauge"></i> Terminal</a>{% endif %}
+    </nav>
+  </header>
+  <main>
+    {% if messages %}<div class="container-xl">{% for m in messages %}<div class="flash {{ m.tags }}" role="status">{{ m }}</div>{% endfor %}</div>{% endif %}
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="container-xl py-5 faint small">
+    {{ BAKELY.INSTITUCION }} · Tulcán, Carchi. Bebidas alcohólicas: venta solo a mayores de 18 años. Consumo responsable.
+  </footer>
+{% endblock %}
+<script src="https://cdn.jsdelivr.net/npm/lucide@0.454.0/dist/umd/lucide.min.js"></script>
+<script>window.lucide && lucide.createIcons();</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

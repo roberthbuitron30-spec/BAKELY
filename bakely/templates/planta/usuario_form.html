@@ -1,0 +1,17 @@
+{% extends "planta/base_planta.html" %}
+{% block titulo_pagina %}{% if instancia %}Editar usuario{% else %}Nuevo operario{% endif %}{% endblock %}
+{% block content %}
+<div class="main-head"><div><h1>{% if instancia %}Editar {{ instancia.username }}{% else %}Nuevo operario{% endif %}</h1>
+  <p>Deja la contraseña en blanco para conservar la actual.</p></div></div>
+<form method="post" class="glass glass-pad row g-3" style="max-width:820px">{% csrf_token %}
+  {{ form.non_field_errors }}
+  {% for f in form %}
+    <div class="{% if f.field.widget.input_type == 'checkbox' %}col-sm-6 d-flex gap-2 align-items-center{% else %}col-sm-6{% endif %}">
+      {% if f.field.widget.input_type == 'checkbox' %}{{ f }}<label for="{{ f.id_for_label }}" class="m-0">{{ f.label }}</label>
+      {% else %}<label class="form-label" for="{{ f.id_for_label }}">{{ f.label }}</label>{{ f }}{% endif %}
+      {{ f.errors }}
+    </div>
+  {% endfor %}
+  <div class="col-12 d-flex gap-2"><button class="btn-bk primario">Guardar usuario</button><a class="btn-bk" href="{% url 'core:usuarios' %}">Cancelar</a></div>
+</form>
+{% endblock %}

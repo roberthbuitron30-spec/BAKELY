@@ -1,0 +1,22 @@
+{% extends "base.html" %}{% load static %}
+{% block title %}Ingreso al terminal · BAKELY{% endblock %}
+{% block body %}
+<main class="d-flex align-items-center justify-content-center" style="min-height:100vh;padding:1rem">
+  <form method="post" class="glass glass-pad" style="width:100%;max-width:400px;padding:2rem">{% csrf_token %}
+    <a class="brand mb-4" href="{% url 'core:landing' %}">
+      <img class="brand-mark" src="{% static 'img/bakely-mark.svg' %}" alt="">
+      <span><span class="brand-name">BAKELY</span><span class="brand-sub">Terminal operativo de planta</span></span>
+    </a>
+    <h1 class="h4 mb-1">Ingresa con tu usuario de planta</h1>
+    <p class="dim small">Cada acción queda registrada con tu usuario y hora.</p>
+    {% if form.non_field_errors %}<div class="flash error small">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div>{% endif %}
+    <div class="mb-3"><label class="form-label" for="id_username">Usuario</label>
+      <input class="form-control glass-input" id="id_username" name="username" autocomplete="username" required autofocus value="{{ form.username.value|default:'' }}"></div>
+    <div class="mb-3"><label class="form-label" for="id_password">Contraseña</label>
+      <input class="form-control glass-input" type="password" id="id_password" name="password" autocomplete="current-password" required></div>
+    <input type="hidden" name="next" value="{{ next }}">
+    <button class="btn-bk primario w-100" type="submit">Ingresar</button>
+    <p class="small faint mt-3 mb-0">¿Eres cliente? <a href="{% url 'core:catalogo' %}">Ir a la tienda</a></p>
+  </form>
+</main>
+{% endblock %}

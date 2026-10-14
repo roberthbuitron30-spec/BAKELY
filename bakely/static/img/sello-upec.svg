@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Sello UPEC">
+  <!-- Sello genérico de marcador. Sustituya por el sello institucional oficial de la UPEC (static/img/sello-upec.svg). -->
+  <defs>
+    <path id="arc" d="M60 60 m-44 0 a44 44 0 1 1 88 0 a44 44 0 1 1 -88 0"/>
+  </defs>
+  <circle cx="60" cy="60" r="57" fill="none" stroke="#94A3B8" stroke-opacity=".45" stroke-width="1.5"/>
+  <circle cx="60" cy="60" r="35" fill="none" stroke="#94A3B8" stroke-opacity=".35" stroke-width="1"/>
+  <text font-family="Barlow Semi Condensed, sans-serif" font-size="9.2" letter-spacing="1.6" fill="#94A3B8">
+    <textPath href="#arc" startOffset="2%">UNIVERSIDAD POLITÉCNICA ESTATAL DEL CARCHI · TULCÁN ·</textPath>
+  </text>
+  <text x="60" y="58" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-weight="700" font-size="20" fill="#E6EAF2">UPEC</text>
+  <text x="60" y="73" text-anchor="middle" font-family="Barlow, sans-serif" font-size="7.5" fill="#94A3B8">Planta piloto</text>
+</svg>
